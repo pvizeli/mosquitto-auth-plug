@@ -75,6 +75,18 @@
 
 #define NBACKENDS	(5)
 
+#if BE_PSK
+# define PSKSETUP do { \
+			if (!strcmp(psk_database, q)) { \
+				(*pskbep)->conf =  (*bep)->conf; \
+				(*pskbep)->superuser =  (*bep)->superuser; \
+				(*pskbep)->aclcheck =  (*bep)->aclcheck; \
+			} \
+		   } while (0)
+#else
+# define PSKSETUP
+#endif
+
 struct backend_p {
 	void *conf;			/* Handle to backend */
 	char *name;
@@ -103,6 +115,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	int ret = MOSQ_ERR_SUCCESS;
 	int nord;
 	struct backend_p **bep;
+#ifdef BE_PSK
+	struct backend_p **pskbep;
+	char *psk_database = NULL;
+#endif
 
 	log_init();
 
@@ -161,6 +177,10 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 				_log(LOG_NOTICE, "Error: Invalid log_quiet value (%s).", o->value);
 			}
 		}
+#if 0
+		if (!strcmp(o->key, "topic_prefix"))
+			ud->topicprefix = strdup(o->value);
+#endif
 	}
 
 	/*
@@ -182,8 +202,163 @@ int mosquitto_auth_plugin_init(void **userdata, struct mosquitto_auth_opt *auth_
 	bep = ud->be_list;
 	nord = 0;
 
+#if BE_PSK
+	/*
+	 * Force adding PSK back-end, which must be indexed at 0
+	 * The PSK back-end is a little special in that it will use
+	 * a database from another back-end (e.g. mysql or sqlite)
+	 * for authorization.
+	 */
+
+	if ((psk_database = p_stab("psk_database")) == NULL) {
+		_fatal("PSK is configured so psk_database needs to be set");
+	}
+
+	pskbep = bep;
+	*pskbep = (struct backend_p *)malloc(sizeof(struct backend_p));
+	memset(*pskbep, 0, sizeof(struct backend_p));
+	(*pskbep)->name = strdup("psk");
+
+	bep = pskbep;
+	bep++;
+	nord++;
+#endif /* BE_PSK */
+
 	for (q = strsep(&p, ","); q && *q && (nord < NBACKENDS); q = strsep(&p, ",")) {
 		int found = 0;
+#if BE_MYSQL
+		if (!strcmp(q, "mysql")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("mysql");
+			(*bep)->conf = be_mysql_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_mysql_destroy;
+			(*bep)->getuser =  be_mysql_getuser;
+			(*bep)->superuser =  be_mysql_superuser;
+			(*bep)->aclcheck =  be_mysql_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_POSTGRES
+		if (!strcmp(q, "postgres")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("postgres");
+			(*bep)->conf = be_pg_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill = be_pg_destroy;
+			(*bep)->getuser = be_pg_getuser;
+			(*bep)->superuser = be_pg_superuser;
+			(*bep)->aclcheck = be_pg_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_LDAP
+		if (!strcmp(q, "ldap")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("ldap");
+			(*bep)->conf = be_ldap_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_ldap_destroy;
+			(*bep)->getuser =  be_ldap_getuser;
+			(*bep)->superuser =  be_ldap_superuser;
+			(*bep)->aclcheck =  be_ldap_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_CDB
+		if (!strcmp(q, "cdb")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("cdb");
+			(*bep)->conf = be_cdb_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_cdb_destroy;
+			(*bep)->getuser =  be_cdb_getuser;
+			(*bep)->superuser =  be_cdb_superuser;
+			(*bep)->aclcheck =  be_cdb_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_SQLITE
+		if (!strcmp(q, "sqlite")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("sqlite");
+			(*bep)->conf = be_sqlite_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_sqlite_destroy;
+			(*bep)->getuser =  be_sqlite_getuser;
+			(*bep)->superuser =  be_sqlite_superuser;
+			(*bep)->aclcheck =  be_sqlite_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_REDIS
+		if (!strcmp(q, "redis")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("redis");
+			(*bep)->conf = be_redis_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_redis_destroy;
+			(*bep)->getuser =  be_redis_getuser;
+			(*bep)->superuser =  be_redis_superuser;
+			(*bep)->aclcheck =  be_redis_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
+#if BE_MEMCACHED
+		if (!strcmp(q, "memcached")) {
+			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
+			memset(*bep, 0, sizeof(struct backend_p));
+			(*bep)->name = strdup("memcached");
+			(*bep)->conf = be_memcached_init();
+			if ((*bep)->conf == NULL) {
+				_fatal("%s init returns NULL", q);
+			}
+			(*bep)->kill =  be_memcached_destroy;
+			(*bep)->getuser =  be_memcached_getuser;
+			(*bep)->superuser =  be_memcached_superuser;
+			(*bep)->aclcheck =  be_memcached_aclcheck;
+			found = 1;
+			ud->fallback_be = ud->fallback_be == -1 ? nord : ud->fallback_be;
+			PSKSETUP;
+		}
+#endif
+
 #if BE_HTTP
 		if (!strcmp(q, "http")) {
 			*bep = (struct backend_p *)malloc(sizeof(struct backend_p));
@@ -323,7 +498,9 @@ int mosquitto_auth_security_cleanup(void *userdata, struct mosquitto_auth_opt *a
 }
 
 
-#if MOSQ_AUTH_PLUGIN_VERSION >=3
+#if MOSQ_AUTH_PLUGIN_VERSION == 4
+int mosquitto_auth_unpwd_check(void *userdata, struct mosquitto *client, const char *username, const char *password)
+#elif MOSQ_AUTH_PLUGIN_VERSION == 3
 int mosquitto_auth_unpwd_check(void *userdata, const struct mosquitto *client, const char *username, const char *password)
 #else
 int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char *password)
@@ -422,7 +599,9 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 	return granted;
 }
 
-#if MOSQ_AUTH_PLUGIN_VERSION >= 3
+#if MOSQ_AUTH_PLUGIN_VERSION == 4
+int mosquitto_auth_acl_check(void *userdata, int access, struct mosquitto *client, const struct mosquitto_acl_msg *msg)
+#elif MOSQ_AUTH_PLUGIN_VERSION == 3
 int mosquitto_auth_acl_check(void *userdata, int access, const struct mosquitto *client, const struct mosquitto_acl_msg *msg)
 #else
 int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *username, const char *topic, int access)
@@ -573,7 +752,9 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
 }
 
 
-#if MOSQ_AUTH_PLUGIN_VERSION >= 3
+#if MOSQ_AUTH_PLUGIN_VERSION == 4
+int mosquitto_auth_psk_key_get(void *userdata, struct mosquitto *client, const char *hint, const char *identity, char *key, int max_key_len)
+#elif MOSQ_AUTH_PLUGIN_VERSION == 3
 int mosquitto_auth_psk_key_get(void *userdata, const struct mosquitto *client, const char *hint, const char *identity, char *key, int max_key_len)
 #else
 int mosquitto_auth_psk_key_get(void *userdata, const char *hint, const char *identity, char *key, int max_key_len)
