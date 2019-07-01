@@ -6,7 +6,7 @@ BE_CFLAGS =
 BE_LDFLAGS =
 BE_LDADD =
 BE_DEPS =
-OBJS = auth-plug.o base64.o pbkdf2-check.o log.o envs.o hash.o be-psk.o backends.o cache.o
+OBJS = src/auth-plug.o src/base64.o src/pbkdf2-check.o src/log.o src/envs.o src/hash.o src/be-psk.o src/backends.o src/cache.o
 
 BACKENDS =
 BACKENDSTR =
@@ -23,7 +23,7 @@ ifneq ($(BACKEND_CDB),no)
 	BE_LDFLAGS += -L$(CDBDIR)
 	BE_LDADD += -lcdb
 	BE_DEPS += $(CDBLIB)
-	OBJS += be-cdb.o
+	OBJS += src/be-cdb.o
 endif
 
 ifneq ($(BACKEND_MYSQL),no)
@@ -32,7 +32,7 @@ ifneq ($(BACKEND_MYSQL),no)
 
 	BE_CFLAGS += `mysql_config --cflags`
 	BE_LDADD += `mysql_config --libs`
-	OBJS += be-mysql.o
+	OBJS += src/be-mysql.o
 endif
 
 ifneq ($(BACKEND_SQLITE),no)
@@ -40,7 +40,7 @@ ifneq ($(BACKEND_SQLITE),no)
 	BACKENDSTR += SQLite
 
 	BE_LDADD += -lsqlite3
-	OBJS += be-sqlite.o
+	OBJS += src/be-sqlite.o
 endif
 
 ifneq ($(BACKEND_REDIS),no)
@@ -50,7 +50,7 @@ ifneq ($(BACKEND_REDIS),no)
 	BE_CFLAGS += -I/usr/local/include/hiredis
 	BE_LDFLAGS += -L/usr/local/lib
 	BE_LDADD += -lhiredis
-	OBJS += be-redis.o
+	OBJS += src/be-redis.o
 endif
 
 ifeq ($(BACKEND_MEMCACHED),yes)
@@ -60,7 +60,7 @@ ifeq ($(BACKEND_MEMCACHED),yes)
 	BE_CFLAGS += -I/usr/local/include/libmemcached
 	BE_LDFLAGS += -L/usr/local/lib
 	BE_LDADD += -lmemcached
-	OBJS += be-memcached.o
+	OBJS += src/be-memcached.o
 endif
 
 ifneq ($(BACKEND_POSTGRES),no)
@@ -69,7 +69,7 @@ ifneq ($(BACKEND_POSTGRES),no)
 
 	BE_CFLAGS += -I`pg_config --includedir`
 	BE_LDADD += -L`pg_config --libdir` -lpq
-	OBJS += be-postgres.o
+	OBJS += src/be-postgres.o
 endif
 
 ifneq ($(BACKEND_LDAP),no)
@@ -77,7 +77,7 @@ ifneq ($(BACKEND_LDAP),no)
 	BACKENDSTR += LDAP
 
 	BE_LDADD += -lldap -llber
-	OBJS += be-ldap.o
+	OBJS += src/be-ldap.o
 endif
 
 ifneq ($(BACKEND_HTTP), no)
@@ -85,7 +85,7 @@ ifneq ($(BACKEND_HTTP), no)
 	BACKENDSTR += HTTP
 
 	BE_LDADD += -lcurl
-	OBJS += be-http.o
+	OBJS += src/be-http.o
 endif
 
 ifneq ($(BACKEND_JWT), no)
@@ -93,7 +93,7 @@ ifneq ($(BACKEND_JWT), no)
 	BACKENDSTR += JWT
 
 	BE_LDADD += -lcurl
-	OBJS += be-jwt.o
+	OBJS += src/be-jwt.o
 endif
 
 ifneq ($(BACKEND_MONGO), no)
@@ -105,14 +105,14 @@ ifneq ($(BACKEND_MONGO), no)
 	BE_LDFLAGS +=`pkg-config --libs-only-L libbson-1.0 libmongoc-1.0`
 	BE_LDFLAGS += -L/usr/local/lib
 	BE_LDADD += -lmongoc-1.0 -lbson-1.0
-	OBJS += be-mongo.o
+	OBJS += src/be-mongo.o
 endif
 
 ifneq ($(BACKEND_FILES), no)
 	BACKENDS+= -DBE_FILES
 	BACKENDSTR += Files
 
-	OBJS += be-files.o
+	OBJS += src/be-files.o
 endif
 
 ifeq ($(origin SUPPORT_DJANGO_HASHERS), undefined)
@@ -159,28 +159,29 @@ printconfig:
 auth-plug.so : $(OBJS) $(BE_DEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -fPIC -shared -o $@ $(OBJS) $(BE_DEPS) $(LDADD)
 
-be-redis.o: be-redis.c be-redis.h log.h hash.h envs.h Makefile
-be-memcached.o: be-memcached.c be-memcached.h log.h hash.h envs.h Makefile
-be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
-auth-plug.o: auth-plug.c be-cdb.h be-mysql.h be-sqlite.h Makefile cache.h
-be-psk.o: be-psk.c be-psk.h Makefile
-be-cdb.o: be-cdb.c be-cdb.h Makefile
-be-mysql.o: be-mysql.c be-mysql.h Makefile
-be-ldap.o: be-ldap.c be-ldap.h Makefile
-be-sqlite.o: be-sqlite.c be-sqlite.h Makefile
-pbkdf2-check.o: pbkdf2-check.c base64.h Makefile
-base64.o: base64.c base64.h Makefile
-log.o: log.c log.h Makefile
-envs.o: envs.c envs.h Makefile
-hash.o: hash.c hash.h uthash.h Makefile
-be-postgres.o: be-postgres.c be-postgres.h Makefile
-cache.o: cache.c cache.h uthash.h Makefile
-be-http.o: be-http.c be-http.h Makefile backends.h
-be-jwt.o: be-jwt.c be-jwt.h Makefile backends.h
-be-mongo.o: be-mongo.c be-mongo.h Makefile
-be-files.o: be-files.c be-files.h Makefile
+be-redis.o: src/be-redis.c src/be-redis.h src/log.h src/hash.h src/envs.h Makefile
+be-memcached.o: src/be-memcached.c src/be-memcached.h src/log.h src/hash.h src/envs.h Makefile
+be-sqlite.o: src/be-sqlite.c src/be-sqlite.h Makefile
+auth-plug.o: src/auth-plug.c src/be-cdb.h src/be-mysql.h src/be-sqlite.h Makefile src/cache.h
+be-psk.o: src/be-psk.c src/be-psk.h Makefile
+be-cdb.o: src/be-cdb.c src/be-cdb.h Makefile
+be-mysql.o: src/be-mysql.c src/be-mysql.h Makefile
+be-ldap.o: src/be-ldap.c src/be-ldap.h Makefile
+be-sqlite.o: src/be-sqlite.c src/be-sqlite.h Makefile
+pbkdf2-check.o: src/pbkdf2-check.c src/base64.h Makefile
+base64.o: src/base64.c src/base64.h Makefile
+log.o: src/log.c src/log.h Makefile
+envs.o: src/envs.c src/envs.h Makefile
+hash.o: src/hash.c src/hash.h src/uthash.h Makefile
+be-postgres.o: src/be-postgres.c src/be-postgres.h Makefile
+cache.o: src/cache.c src/cache.h src/uthash.h Makefile
+be-http.o: src/be-http.c src/be-http.h Makefile src/backends.h
+be-jwt.o: src/be-jwt.c src/be-jwt.h Makefile src/backends.h
+be-mongo.o: src/be-mongo.c src/be-mongo.h Makefile
+be-files.o: src/be-files.c src/be-files.h Makefile
+backends.o: src/backends.c src/backends.h Makefile
 
-np: np.c base64.o
+np: src/np.c src/base64.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(OSSLIBS)
 
 $(CDBLIB):
