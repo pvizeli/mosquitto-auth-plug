@@ -33,6 +33,7 @@
 #include <string.h>
 #include <time.h>
 #include <mosquitto.h>
+#include <mosquitto_broker.h>
 #include <mosquitto_plugin.h>
 #include "log.h"
 
