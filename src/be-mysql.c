@@ -72,7 +72,7 @@ void *be_mysql_init()
 	char *opt_flag;
 	int port;
 	bool ssl_enabled;	
-	my_bool reconnect = false;
+	bool reconnect = false;
 	
 
 	_log(LOG_DEBUG, "}}}} MYSQL");
