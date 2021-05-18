@@ -318,7 +318,7 @@ int be_http_getuser(void *handle, const char *username, const char *password, ch
 
 	while (re == BACKEND_ERROR && try <= conf->retry_count) {
 		try++;
-		re = http_post(handle, conf->getuser_uri, NULL, username, password, NULL, -1, METHOD_GETUSER);
+		re = http_post(handle, conf->getuser_uri, clientid, username, password, NULL, -1, METHOD_GETUSER);
 	}
 	return re;
 };

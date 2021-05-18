@@ -379,7 +379,7 @@ then an error is returned and the client is disconnected.
 
 | URI-Param         | username | password | clientid | topic | acc |
 | ----------------- | -------- | -------- | -------- | :---: | :-: |
-| http_getuser_uri  |   Y      |   Y      |   N      |   N   |  N  |
+| http_getuser_uri  |   Y      |   Y      |   Y      |   N   |  N  |
 | http_superuser_uri|   Y      |   N      |   N      |   N   |  N  |
 | http_aclcheck_uri |   Y      |   N      |   Y      |   Y   |  Y  |
 
