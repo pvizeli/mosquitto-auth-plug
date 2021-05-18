@@ -63,7 +63,7 @@ void __log(int priority, const char *fmt, ...)
 	time(&now);
 
 	va_start(va, fmt);
-	fprintf(stderr, "%ld: |-- ", now);
+	fprintf(stderr, "%lld: |-- ", (long long)now);
 	vfprintf(stderr, fmt, va);
 	fprintf(stderr, "\n");
 	fflush(stderr);
